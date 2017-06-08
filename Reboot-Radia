@@ -1,0 +1,74 @@
+function Reboot-Radia {
+<#
+.SYNOPSIS
+    Reboots Radia servers based on the tier of the radia server.
+    REQUIRES: Wait-ForService Function to be loaded.
+
+.DESCRIPTION
+    Stops the Radia Daemon on the server, then reboots server and waits 
+    for it to reboot and for the service start again before completing.
+
+.PARAMETER ComputerName
+    Remote or local computer, can be passed by multiple names seperated by a comma, a file or from the command prompt.
+
+.PARAMETER Core
+    Use this for Radia Core servers at the Tier 1 level.
+
+.PARAMETER Satellite
+    Use this for Radia Satellite servers at the Tier 2 & 3 level.
+
+.NOTES
+    Author: Hugh Macpherson
+    Version: 1.0
+
+.EXAMPLE
+    Reboot-Radia -ComputerName localhost -Core
+
+
+    Reboot-Radia -ComputerName localhost -Satellite
+
+
+    Reboot-Radia -ComputerName localhost -Core -verbose
+    VERBOSE: Stopping Radia Services gracefully
+    VERBOSE: Restarting Radia Server: localhost
+    VERBOSE: Waiting for Radia Services to start
+
+#>
+
+[CmdletBinding()]
+param(
+        [parameter(Mandatory=$True,
+                   ValueFromPipeline=$True,
+                   ValueFromPipelineByPropertyName=$True,
+                   HelpMessage="The Computer Name")]
+        [alias('DNSHostName','hostname','cn')]
+        [string[]]$Computername,
+        [switch] $Core,
+        [switch] $Satellite
+    ) #Closes Parameters
+
+if ($Core) {
+    foreach ($Computer in $ComputerName) {
+        Write-Verbose "Stopping Radia Services gracefully on: $Computer"
+        Stop-Service -Name 'HPCA Core' -ComputerName $Computer
+        Wait-ForService -ComputerName $Computer -ServiceName 'HPCA Core' -Status 'Stopped'
+        Write-Verbose "Restarting Radia Server: $Computer"
+        Restart-Computer -ComputerName $Computer -Wait
+        Write-Verbose "Waiting for Radia Services to start on $Computer"
+        Wait-ForService -ComputerName $Computer -ServiceName 'HPCA Core' -Status 'Running'
+        } #Closes ForEach statement
+    } #Closes Core IF statement
+
+if ($Satellite) {
+    foreach ($Computer in $ComputerName) {
+        Write-Verbose "Stopping Radia Services gracefully on: $Computer"
+        Stop-Service -Name 'HPCA Core' -ComputerName $Computer
+        Wait-ForService -ComputerName $Computer -ServiceName 'HPCA Satellite' -Status 'Stopped'
+        Write-Verbose "Restarting Radia Server: $Computer"
+        Restart-Computer -ComputerName $Computer -Wait
+        Write-Verbose "Waiting for Radia Services to start on $Computer"
+        Wait-ForService -ComputerName $Computer -ServiceName 'HPCA Satellite' -Status 'Running'
+        } #Closes ForEach statement
+    } #Closes Satellite IF statement
+
+} #Closes Reboot-Radia Function
